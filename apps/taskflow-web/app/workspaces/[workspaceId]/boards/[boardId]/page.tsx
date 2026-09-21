@@ -135,7 +135,7 @@ function BoardContent({
     }
   }
   function onDragEnd({ active, over }: DragEndEvent) {
-    if (!board || !over || hasFilters) return;
+    if (!board || !over || hasFilters || active.id === over.id) return;
     const source = board.columns.find((c) =>
       c.tasks.some((t) => t.id === active.id),
     );
