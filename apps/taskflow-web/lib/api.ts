@@ -39,7 +39,7 @@ export type Board = {
 export type Workspace = {
   id: string;
   name: string;
-  description?: string;
+  description?: string | null;
   role?: "OWNER" | "MEMBER";
   _count?: { members: number; boards: number };
   boards?: Array<{ id: string; name: string; _count: { tasks: number } }>;
@@ -57,6 +57,17 @@ export function saveSession(value: string) {
 }
 export function clearSession() {
   sessionStorage.removeItem("taskflow_token");
+}
+export function authReturnPath(path: string) {
+  return path.startsWith("/") && !path.startsWith("//") && !path.includes("\\")
+    ? path
+    : "/dashboard";
+}
+export function authPageHref(mode: "login" | "signup", path: string) {
+  return `/${mode}?next=${encodeURIComponent(authReturnPath(path))}`;
+}
+export function loginHref(path: string) {
+  return authPageHref("login", path);
 }
 export async function api<T>(
   path: string,
@@ -84,7 +95,9 @@ export async function api<T>(
       !path.startsWith("/api/auth/")
     ) {
       clearSession();
-      window.location.href = "/login";
+      window.location.href = loginHref(
+        window.location.pathname + window.location.search,
+      );
     }
     throw new Error(message);
   }

@@ -4,12 +4,12 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { SessionGuard } from "@/components/SessionGuard";
-import { api, json } from "@/lib/api";
+import { api, clearSession, json, loginHref, User } from "@/lib/api";
 
 export default function InvitePage() {
-  return <SessionGuard>{() => <AcceptInvite />}</SessionGuard>;
+  return <SessionGuard>{(user) => <AcceptInvite user={user} />}</SessionGuard>;
 }
-function AcceptInvite() {
+function AcceptInvite({ user }: { user: User }) {
   const { token } = useParams<{ token: string }>();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,12 @@ function AcceptInvite() {
         <span className="section-kicker">YOU'RE INVITED</span>
         <h1>Work is better together.</h1>
         <p>Accept this invitation to join your teammate&apos;s workspace.</p>
-        {error && <div className="form-error">{error}</div>}
+        <p>Signed in as {user.email}</p>
+        {error && (
+          <div className="form-error" role="alert">
+            {error}
+          </div>
+        )}
         <button
           className="button primary full"
           onClick={accept}
@@ -46,6 +51,20 @@ function AcceptInvite() {
         >
           {loading ? "Joining…" : "Accept invitation"}
         </button>
+        {error && (
+          <button
+            type="button"
+            className="button secondary full"
+            onClick={() => {
+              clearSession();
+              router.replace(
+                loginHref(window.location.pathname + window.location.search),
+              );
+            }}
+          >
+            Log in with a different account
+          </button>
+        )}
         <Link href="/dashboard" className="text-link">
           Back to dashboard
         </Link>

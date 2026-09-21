@@ -32,6 +32,10 @@ function WorkspaceContent({
   const [boardName, setBoardName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteUrl, setInviteUrl] = useState("");
+  const [workspaceName, setWorkspaceName] = useState("");
+  const [workspaceDescription, setWorkspaceDescription] = useState("");
+  const [savingWorkspace, setSavingWorkspace] = useState(false);
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
   const load = useCallback(() => {
     Promise.all([
       api<{ workspaces: Workspace[] }>("/api/workspaces"),
@@ -40,6 +44,8 @@ function WorkspaceContent({
       .then(([list, detail]) => {
         setWorkspaces(list.workspaces);
         setWorkspace(detail.workspace);
+        setWorkspaceName(detail.workspace.name);
+        setWorkspaceDescription(detail.workspace.description ?? "");
       })
       .catch((e) => setError(e.message));
   }, [workspaceId]);
@@ -71,6 +77,66 @@ function WorkspaceContent({
       toast.error((e as Error).message);
     }
   }
+  async function saveWorkspace(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingWorkspace(true);
+    try {
+      const { workspace: updated } = await api<{ workspace: Workspace }>(
+        `/api/workspaces/${workspaceId}`,
+        json("PATCH", {
+          name: workspaceName,
+          description: workspaceDescription,
+        }),
+      );
+      setWorkspace((current) => current && { ...current, ...updated });
+      setWorkspaces((current) =>
+        current.map((item) =>
+          item.id === workspaceId ? { ...item, ...updated } : item,
+        ),
+      );
+      setWorkspaceName(updated.name);
+      setWorkspaceDescription(updated.description ?? "");
+      toast.success("Workspace settings saved.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSavingWorkspace(false);
+    }
+  }
+  async function removeMember(memberId: string, memberName: string) {
+    if (!window.confirm(`Remove ${memberName} from this workspace?`)) return;
+    setRemovingMemberId(memberId);
+    try {
+      await api(`/api/workspaces/${workspaceId}/members/${memberId}`, {
+        method: "DELETE",
+      });
+      setWorkspace((current) =>
+        current && {
+          ...current,
+          members: current.members?.filter(
+            (member) => member.user.id !== memberId,
+          ),
+        },
+      );
+      setWorkspaces((current) =>
+        current.map((item) =>
+          item.id === workspaceId && item._count
+            ? {
+                ...item,
+                _count: { ...item._count, members: item._count.members - 1 },
+              }
+            : item,
+        ),
+      );
+      toast.success(`${memberName} was removed.`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setRemovingMemberId(null);
+    }
+  }
+  const isOwner =
+    workspaces.find((item) => item.id === workspaceId)?.role === "OWNER";
   return (
     <AppShell
       user={user}
@@ -103,7 +169,7 @@ function WorkspaceContent({
                 </p>
               </div>
               <span className="role-badge">
-                {workspaces.find((w) => w.id === workspaceId)?.role ?? "MEMBER"}
+                {isOwner ? "OWNER" : "MEMBER"}
               </span>
             </div>
             <div className="stats-row">
@@ -156,8 +222,7 @@ function WorkspaceContent({
                       No boards yet. Create your first project board.
                     </div>
                   )}
-                  {workspaces.find((w) => w.id === workspaceId)?.role ===
-                    "OWNER" && (
+                  {isOwner && (
                     <form className="inline-form" onSubmit={createBoard}>
                       <input
                         value={boardName}
@@ -172,6 +237,47 @@ function WorkspaceContent({
                     </form>
                   )}
                 </section>
+                {isOwner && (
+                  <section
+                    className="surface-section workspace-settings"
+                    id="settings"
+                  >
+                    <div className="section-head">
+                      <div>
+                        <span className="section-kicker">MAKE IT YOURS</span>
+                        <h2>Workspace settings</h2>
+                      </div>
+                    </div>
+                    <form onSubmit={saveWorkspace}>
+                      <label>
+                        Workspace name
+                        <input
+                          value={workspaceName}
+                          onChange={(e) => setWorkspaceName(e.target.value)}
+                          maxLength={80}
+                          required
+                        />
+                      </label>
+                      <label>
+                        Description
+                        <textarea
+                          value={workspaceDescription}
+                          onChange={(e) =>
+                            setWorkspaceDescription(e.target.value)
+                          }
+                          maxLength={500}
+                          rows={3}
+                        />
+                      </label>
+                      <button
+                        className="button primary"
+                        disabled={savingWorkspace}
+                      >
+                        {savingWorkspace ? "Saving…" : "Save changes"}
+                      </button>
+                    </form>
+                  </section>
+                )}
                 <section className="surface-section" id="activity">
                   <div className="section-head">
                     <div>
@@ -219,12 +325,28 @@ function WorkspaceContent({
                           <strong>{member.user.name}</strong>
                           <small>{member.user.email}</small>
                         </div>
-                        <span className="member-role">{member.role}</span>
+                        <span className="member-role role-badge">
+                          {member.role}
+                        </span>
+                        {isOwner && member.role === "MEMBER" && (
+                          <button
+                            type="button"
+                            className="delete-button member-remove"
+                            onClick={() =>
+                              removeMember(member.user.id, member.user.name)
+                            }
+                            disabled={removingMemberId !== null}
+                            aria-label={`Remove ${member.user.name}`}
+                          >
+                            {removingMemberId === member.user.id
+                              ? "Removing…"
+                              : "Remove"}
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
-                  {workspaces.find((w) => w.id === workspaceId)?.role ===
-                    "OWNER" && (
+                  {isOwner && (
                     <form className="invite-form" onSubmit={invite}>
                       <label>
                         Invite a teammate by email

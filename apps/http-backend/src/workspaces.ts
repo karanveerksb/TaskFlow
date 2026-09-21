@@ -60,7 +60,8 @@ workspaceRouter.post("/invites/:token/accept", asyncRoute(async (req, res) => {
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const user = await db.user.findUniqueOrThrow({ where: { id: req.userId } });
   const invite = await db.invite.findUnique({ where: { tokenHash } });
-  if (!invite || invite.acceptedAt || invite.expiresAt < new Date() || invite.email !== user.email) throw new HttpError(400, "Invitation is invalid, expired, or addressed to another email.");
+  if (!invite || invite.acceptedAt || invite.expiresAt < new Date()) throw new HttpError(400, "Invitation is invalid, expired, or already used.");
+  if (invite.email !== user.email) throw new HttpError(403, "This invitation was sent to a different email address. Sign in with the invited account.");
   await db.$transaction(async tx => {
     const claimed = await tx.invite.updateMany({ where: { id: invite.id, acceptedAt: null, expiresAt: { gt: new Date() } }, data: { acceptedAt: new Date() } });
     if (claimed.count !== 1) throw new HttpError(409, "Invitation has already been used.");

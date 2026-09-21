@@ -142,6 +142,15 @@ test(
       assert.equal(wa.status, 201);
       assert.equal(wb.status, 201);
       workspaceIds.push(wa.data.workspace.id, wb.data.workspace.id);
+      const renamedWorkspace = await request(
+        `/api/workspaces/${wa.data.workspace.id}`,
+        "PATCH",
+        { name: "Engineering", description: "Release planning" },
+        a,
+      );
+      assert.equal(renamedWorkspace.status, 200);
+      assert.equal(renamedWorkspace.data.workspace.name, "Engineering");
+      assert.equal(renamedWorkspace.data.workspace.description, "Release planning");
       const boardA = await request(
         `/api/workspaces/${wa.data.workspace.id}/boards`,
         "POST",
@@ -156,12 +165,20 @@ test(
       );
       assert.equal(boardA.status, 201);
       assert.equal(boardB.status, 201);
+      const renamedBoard = await request(
+        `/api/boards/${boardA.data.board.id}`,
+        "PATCH",
+        { name: "Launch board" },
+        a,
+      );
+      assert.equal(renamedBoard.status, 200);
+      assert.equal(renamedBoard.data.board.name, "Launch board");
       assert.equal(
         (
           await request(
             `/api/workspaces/${wa.data.workspace.id}/boards`,
             "POST",
-            { name: "Website" },
+            { name: "Launch board" },
             a,
           )
         ).status,
@@ -217,16 +234,17 @@ test(
         a,
       );
       assert.equal(invite.status, 201);
+      const wrongAccount = await request(
+        `/api/workspaces/invites/${invite.data.token}/accept`,
+        "POST",
+        {},
+        a,
+      );
+      assert.equal(wrongAccount.status, 403);
+      assert.match(wrongAccount.data.message, /different email address/);
       assert.equal(
-        (
-          await request(
-            `/api/workspaces/invites/${invite.data.token}/accept`,
-            "POST",
-            {},
-            a,
-          )
-        ).status,
-        400,
+        (await request(`/api/workspaces/invites/${invite.data.token}/accept`, "POST", {})).status,
+        401,
       );
       assert.equal(
         (
@@ -248,6 +266,29 @@ test(
             b,
           )
         ).status,
+        400,
+      );
+      const memberWorkspace = await request(
+        `/api/workspaces/${wa.data.workspace.id}`,
+        "GET",
+        undefined,
+        b,
+      );
+      assert.equal(memberWorkspace.status, 200);
+      assert.deepEqual(
+        memberWorkspace.data.workspace.members.map((member) => member.role).sort(),
+        ["MEMBER", "OWNER"],
+      );
+      for (const [path, method, body] of [
+        [`/api/workspaces/${wa.data.workspace.id}`, "PATCH", { name: "Unauthorized" }],
+        [`/api/boards/${boardA.data.board.id}`, "PATCH", { name: "Unauthorized" }],
+        [`/api/boards/${boardA.data.board.id}`, "DELETE", undefined],
+        [`/api/workspaces/${wa.data.workspace.id}/members/${first.data.user.id}`, "DELETE", undefined],
+      ]) {
+        assert.equal((await request(path, method, body, b)).status, 403);
+      }
+      assert.equal(
+        (await request(`/api/workspaces/${wa.data.workspace.id}/members/${first.data.user.id}`, "DELETE", undefined, a)).status,
         400,
       );
       const authorizedSocket = await openSocket();
@@ -342,6 +383,19 @@ test(
         ).status,
         403,
       );
+      const membersAfterRemoval = await request(
+        `/api/workspaces/${wa.data.workspace.id}`,
+        "GET",
+        undefined,
+        a,
+      );
+      assert.deepEqual(
+        membersAfterRemoval.data.workspace.members.map((member) => member.user.id),
+        [first.data.user.id],
+      );
+      assert.equal((await request(`/api/boards/${boardB.data.board.id}`, "DELETE", undefined, a)).status, 403);
+      assert.equal((await request(`/api/boards/${boardB.data.board.id}`, "DELETE", undefined, b)).status, 204);
+      assert.equal((await request(`/api/boards/${boardB.data.board.id}`, "GET", undefined, b)).status, 404);
     } finally {
       sockets.forEach((socket) => socket.close());
       wsProcess.kill();

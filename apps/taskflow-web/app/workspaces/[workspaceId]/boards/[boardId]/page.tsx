@@ -1,5 +1,5 @@
 "use client";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DndContext,
@@ -54,8 +54,12 @@ function BoardContent({
     workspaceId: string;
     boardId: string;
   }>();
+  const router = useRouter();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [board, setBoard] = useState<Board | null>(null);
+  const [boardName, setBoardName] = useState("");
+  const [savingBoard, setSavingBoard] = useState(false);
+  const [deletingBoard, setDeletingBoard] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [priority, setPriority] = useState("");
@@ -76,6 +80,7 @@ function BoardContent({
       ]);
       setWorkspaces(list.workspaces);
       setBoard(detail.board);
+      setBoardName(detail.board.name);
       setError("");
     } catch (e) {
       setError((e as Error).message);
@@ -120,6 +125,43 @@ function BoardContent({
     [board, search, priority, assignee, columnFilter],
   );
   const hasFilters = !!(search || priority || assignee || columnFilter);
+  const isOwner =
+    workspaces.find((item) => item.id === workspaceId)?.role === "OWNER";
+  async function saveBoard(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingBoard(true);
+    try {
+      const { board: updated } = await api<{ board: { name: string } }>(
+        `/api/boards/${boardId}`,
+        json("PATCH", { name: boardName }),
+      );
+      setBoard((current) => current && { ...current, name: updated.name });
+      setBoardName(updated.name);
+      toast.success("Board name saved.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSavingBoard(false);
+    }
+  }
+  async function deleteBoard() {
+    if (
+      !board ||
+      !window.confirm(
+        `Delete “${board.name}” and all its tasks? This cannot be undone.`,
+      )
+    )
+      return;
+    setDeletingBoard(true);
+    try {
+      await api(`/api/boards/${boardId}`, { method: "DELETE" });
+      toast.success("Board deleted.");
+      router.replace(`/workspaces/${workspaceId}`);
+    } catch (e) {
+      toast.error((e as Error).message);
+      setDeletingBoard(false);
+    }
+  }
   async function addColumn(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -226,6 +268,38 @@ function BoardContent({
                 </button>
               </div>
             </div>
+            {isOwner && (
+              <section
+                className="board-settings surface-section"
+                aria-label="Board settings"
+              >
+                <form onSubmit={saveBoard}>
+                  <label>
+                    Board name
+                    <input
+                      value={boardName}
+                      onChange={(e) => setBoardName(e.target.value)}
+                      maxLength={80}
+                      required
+                    />
+                  </label>
+                  <button
+                    className="button secondary compact"
+                    disabled={savingBoard || deletingBoard}
+                  >
+                    {savingBoard ? "Saving…" : "Rename board"}
+                  </button>
+                </form>
+                <button
+                  type="button"
+                  className="delete-button"
+                  onClick={deleteBoard}
+                  disabled={deletingBoard || savingBoard}
+                >
+                  {deletingBoard ? "Deleting…" : "Delete board"}
+                </button>
+              </section>
+            )}
             <div className="board-toolbar">
               <label className="search-box">
                 <Search size={17} />

@@ -1,7 +1,7 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { api, token, User } from "@/lib/api";
+import { api, loginHref, token, User } from "@/lib/api";
 
 export function SessionGuard({
   children,
@@ -12,13 +12,14 @@ export function SessionGuard({
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   useEffect(() => {
+    const returnTo = pathname + window.location.search;
     if (!token()) {
-      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      router.replace(loginHref(returnTo));
       return;
     }
     api<{ user: User }>("/api/auth/me")
       .then(({ user }) => setUser(user))
-      .catch(() => router.replace("/login"));
+      .catch(() => router.replace(loginHref(returnTo)));
   }, [pathname, router]);
   if (!user)
     return (

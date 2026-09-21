@@ -610,6 +610,8 @@ select:focus {
 .auth-panel label,
 .create-panel label,
 .invite-form label,
+.workspace-settings label,
+.board-settings label,
 .task-panel form > label,
 .panel-fields label {
   display: block;
@@ -621,6 +623,9 @@ select:focus {
 .create-panel input,
 .create-panel textarea,
 .invite-form input,
+.workspace-settings input,
+.workspace-settings textarea,
+.board-settings input,
 .inline-form input,
 .add-column-form input,
 .quick-add textarea,
@@ -1145,6 +1150,21 @@ select:focus {
   color: var(--green);
   font-weight: 800;
 }
+.member-role.role-badge {
+  padding: 5px 7px;
+  letter-spacing: 0.04em;
+}
+.member-remove {
+  flex: none;
+  font-size: 10px;
+}
+.workspace-settings form label {
+  display: block;
+  margin-bottom: 13px;
+}
+.workspace-settings form button {
+  margin-top: 4px;
+}
 .invite-form {
   border-top: 1px solid var(--line);
   padding-top: 17px;
@@ -1196,6 +1216,33 @@ select:focus {
   color: var(--muted);
   font-size: 13px;
   margin: 0;
+}
+.board-settings {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 18px;
+  margin: 0 38px 13px;
+}
+.board-settings form {
+  display: flex;
+  align-items: end;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+}
+.board-settings label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.board-settings input {
+  margin: 5px 0 0;
+}
+.board-settings > .delete-button {
+  min-height: 35px;
+  white-space: nowrap;
 }
 .breadcrumb {
   display: flex;
@@ -1792,6 +1839,14 @@ select:focus {
   .filter-note {
     margin-left: 17px;
     margin-right: 17px;
+  }
+  .board-settings {
+    margin-left: 17px;
+    margin-right: 17px;
+    flex-wrap: wrap;
+  }
+  .board-settings form {
+    min-width: 100%;
   }
   .board-header {
     align-items: start;

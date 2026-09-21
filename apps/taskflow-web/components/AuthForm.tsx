@@ -3,11 +3,19 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { ArrowRight } from "lucide-react";
-import { api, json, saveSession, User } from "@/lib/api";
+import {
+  api,
+  authPageHref,
+  authReturnPath,
+  json,
+  saveSession,
+  User,
+} from "@/lib/api";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
   const params = useSearchParams();
+  const next = authReturnPath(params.get("next") ?? "/dashboard");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -21,11 +29,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         json("POST", data),
       );
       saveSession(result.token);
-      router.push(
-        params.get("next")?.startsWith("/")
-          ? params.get("next")!
-          : "/dashboard",
-      );
+      router.replace(next);
     } catch (e) {
       setError((e as Error).message);
       setLoading(false);
@@ -126,7 +130,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           </form>
           <p className="auth-switch">
             {mode === "login" ? "New to TaskFlow?" : "Already have an account?"}{" "}
-            <Link href={mode === "login" ? "/signup" : "/login"}>
+            <Link href={authPageHref(mode === "login" ? "signup" : "login", next)}>
               {mode === "login" ? "Create an account" : "Log in"}
             </Link>
           </p>
