@@ -6,11 +6,21 @@ const samples = [
     name: "Backlog",
     count: 2,
     cards: [
-      { title: "Map the onboarding flow", tag: "Planning", accent: "orange" },
       {
-        title: "Audit workspace permissions",
-        tag: "Security",
+        title: "Plan release checklist",
+        tag: "PLANNING",
+        accent: "orange",
+        date: "Sep 24",
+        comments: 1,
+        assignee: "RK",
+      },
+      {
+        title: "Review access controls",
+        tag: "SECURITY",
         accent: "green",
+        date: "Sep 27",
+        comments: 3,
+        assignee: "TM",
       },
     ],
   },
@@ -18,11 +28,21 @@ const samples = [
     name: "In progress",
     count: 2,
     cards: [
-      { title: "Build the team dashboard", tag: "Design", accent: "green" },
       {
-        title: "Review invitation emails",
-        tag: "Operations",
+        title: "Build analytics dashboard",
+        tag: "FRONTEND",
+        accent: "green",
+        date: "Sep 25",
+        comments: 2,
+        assignee: "AV",
+      },
+      {
+        title: "Test invite workflow",
+        tag: "QA",
         accent: "orange",
+        date: "Oct 01",
+        comments: 4,
+        assignee: "RK",
       },
     ],
   },
@@ -30,7 +50,14 @@ const samples = [
     name: "Done",
     count: 1,
     cards: [
-      { title: "Set up project board", tag: "Complete", accent: "green" },
+      {
+        title: "Prepare production board",
+        tag: "COMPLETE",
+        accent: "green",
+        date: "Oct 03",
+        comments: 1,
+        assignee: "TM",
+      },
     ],
   },
 ];
@@ -98,16 +125,16 @@ export default function Home() {
               <div className="preview-top">
                 <div>
                   <span className="preview-breadcrumb">
-                    ACME STUDIO / PRODUCT
+                    NORTHSTAR / ENGINEERING
                   </span>
                   <h3>
-                    Website refresh <span>↗</span>
+                    Launch dashboard <span>↗</span>
                   </h3>
                 </div>
                 <div className="preview-avatars">
-                  <b>AM</b>
-                  <b>SK</b>
-                  <b>JD</b>
+                  <b>RK</b>
+                  <b>TM</b>
+                  <b>AV</b>
                   <span>+2</span>
                 </div>
               </div>
@@ -126,12 +153,12 @@ export default function Home() {
                         <strong>{card.title}</strong>
                         <div className="preview-card-foot">
                           <span>
-                            <CalendarDays size={13} /> Sep 24
+                            <CalendarDays size={13} /> {card.date}
                           </span>
                           <span>
-                            <MessageCircle size={13} /> 2
+                            <MessageCircle size={13} /> {card.comments}
                           </span>
-                          <b>AM</b>
+                          <b>{card.assignee}</b>
                         </div>
                       </div>
                     ))}
